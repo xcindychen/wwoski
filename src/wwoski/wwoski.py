@@ -43,7 +43,6 @@ class SkiWeatherAPI:
 
         weather_data = response.json()
 
-        # Check for API-specific errors (invalid API key or location)
         if "error" in weather_data["data"]:
             error_message = weather_data["data"]["error"][0]["msg"]
             raise ValueError(f"Error from API: {error_message}")

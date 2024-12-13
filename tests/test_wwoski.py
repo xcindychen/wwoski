@@ -4,7 +4,7 @@ import requests
 from dotenv import load_dotenv
 
 load_dotenv()
-valid_api_key=os.getenv('API_KEY') # replace your valid API keys here or in the .env file
+valid_api_key=os.getenv('API_KEY') # your valid API keys should be put in the .env file
 invalid_api_key = "invalid_api_key"
 valid_location = "Stowe"
 invalid_location = "InvalidLocation"

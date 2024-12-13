@@ -10,7 +10,16 @@ $ pip install wwoski
 
 ## Usage
 
-- TODO
+Example Usage:
+- Get the ski weather data in json formmat (It contains all the weather data the website provides.)
+api = SkiWeatherAPI("your_api_key")
+weather_json = api.get_weather_data("stowe", 7)
+- Transform selected ski weather data (in json format) to panda dataframe 
+weather_df = api.transform_to_dataframe(weather_json)
+- Save to csv
+api.save_to_csv(weather_df, "weather_forecast.csv")
+- Visualization: the min/max temperature(C) and snow depth in the input location.
+api.plot_weather_data(weather_df)
 
 ## Contributing
 
