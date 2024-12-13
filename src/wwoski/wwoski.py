@@ -93,7 +93,7 @@ class SkiWeatherAPI:
                 "date": day["date"],
                 "max_temp_C": float(day["maxtempC"]),
                 "min_temp_C": float(day["mintempC"]),
-                "total_snow_cm": float(day["totalSnow_cm"]),
+                "total_snow_cm": float(day.get("totalSnow_cm", 0)),
                 "chance_of_snow": avg_chance_of_snow,
                 "avg_visibility_km": avg_visibility 
             })

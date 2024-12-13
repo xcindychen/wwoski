@@ -1,110 +1,122 @@
-from wwoski import SkiWeatherAPI
 import os
-import requests
+import pytest
+from unittest.mock import patch
+from wwoski import SkiWeatherAPI
 from dotenv import load_dotenv
 
 load_dotenv()
-valid_api_key=os.getenv('API_KEY') # your valid API keys should be put in the .env file
-invalid_api_key = "invalid_api_key"
-valid_location = "Stowe"
-invalid_location = "InvalidLocation"
 
-def test_get_weather_data(api_key, location, num_of_days):
+# Constants
+VALID_API_KEY = os.getenv("API_KEY")  # Valid API key from .env file
+INVALID_API_KEY = "invalid_api_key"
+VALID_LOCATION = "Stowe"
+INVALID_LOCATION = "InvalidLocation"
+NUM_OF_DAYS = 7
+
+# Sample mock response with the correct structure
+MOCK_WEATHER_DATA = {
+    "data": {
+        "weather": [
+            {
+                "date": "2024-12-13",
+                "maxtempC": "2",
+                "mintempC": "-5",
+                "hourly": [
+                    {"time": "0", "tempC": "-2", "windspeedKmph": "15", "humidity": "80"},
+                ],
+            }
+        ]
+    }
+}
+
+@pytest.mark.parametrize(
+    "api_key,location,expected_success",
+    [
+        (VALID_API_KEY, VALID_LOCATION, True),
+        (INVALID_API_KEY, VALID_LOCATION, False),
+        (VALID_API_KEY, INVALID_LOCATION, False),
+        (INVALID_API_KEY, INVALID_LOCATION, False),
+    ],
+)
+@patch("wwoski.SkiWeatherAPI.get_weather_data")
+def test_get_weather_data(mock_get_weather_data, api_key, location, expected_success):
     """
     Test the `get_weather_data` method with different inputs.
     """
-    api = SkiWeatherAPI(api_key)
-    print(f"Testing get_weather_data with API key: {api_key} and location: {location}...")
-    
-    try:
-        weather_data = api.get_weather_data(location, num_of_days)
-        print("Weather data retrieved successfully!")
-        print(weather_data) 
-    except ValueError as e:
-        print(f"Error occurred (API not valid): {e}")
+    if expected_success:
+        mock_get_weather_data.return_value = MOCK_WEATHER_DATA
+    else:
+        mock_get_weather_data.side_effect = ValueError("Invalid API key or location")
 
-def test_transform_to_dataframe(api_key, location, num_of_days):
+    api = SkiWeatherAPI(api_key)
+
+    if expected_success:
+        weather_data = api.get_weather_data(location, NUM_OF_DAYS)
+        assert weather_data == MOCK_WEATHER_DATA
+    else:
+        with pytest.raises(ValueError):
+            api.get_weather_data(location, NUM_OF_DAYS)
+
+
+@pytest.mark.parametrize(
+    "api_key,location",
+    [(VALID_API_KEY, VALID_LOCATION)],
+)
+@patch("wwoski.SkiWeatherAPI.get_weather_data")
+def test_transform_to_dataframe(mock_get_weather_data, api_key, location):
     """
     Test the `transform_to_dataframe` method with valid weather data.
     """
-    api = SkiWeatherAPI(api_key)
-    
-    print(f"Testing transform_to_dataframe for location: {location}...")
-    
-    try:
-        weather_data = api.get_weather_data(location, num_of_days)
-        weather_df = api.transform_to_dataframe(weather_data)
-        print("DataFrame created successfully!")
-        print(weather_df) 
-    except ValueError as e:
-        print(f"Error occurred (Invalid location): {e}")
+    mock_get_weather_data.return_value = MOCK_WEATHER_DATA
 
-def test_save_to_csv(api_key, location, num_of_days):
+    api = SkiWeatherAPI(api_key)
+    weather_data = api.get_weather_data(location, NUM_OF_DAYS)
+    weather_df = api.transform_to_dataframe(weather_data)
+
+    assert not weather_df.empty
+    assert "date" in weather_df.columns
+
+
+@pytest.mark.parametrize(
+    "api_key,location",
+    [(VALID_API_KEY, VALID_LOCATION)],
+)
+@patch("wwoski.SkiWeatherAPI.get_weather_data")
+def test_save_to_csv(mock_get_weather_data, api_key, location, tmp_path):
     """
     Test the `save_to_csv` method by saving to a file.
     """
-    api = SkiWeatherAPI(api_key)
-    
-    print(f"Testing save_to_csv for location: {location}...")
-    
-    try:
-        weather_data = api.get_weather_data(location, num_of_days)
-        weather_df = api.transform_to_dataframe(weather_data)
-        filename = "weather_forecast.csv"
-        api.save_to_csv(weather_df, filename)
-        
-        if os.path.exists(filename):
-            print(f"CSV file {filename} saved successfully!")
-        else:
-            print(f"Failed to save CSV file {filename}.")
-    except Exception as e:
-        print(f"Error occurred: {e}")
+    mock_get_weather_data.return_value = MOCK_WEATHER_DATA
 
-def test_plot_weather_data(api_key, location, num_of_days):
+    api = SkiWeatherAPI(api_key)
+    weather_data = api.get_weather_data(location, NUM_OF_DAYS)
+    weather_df = api.transform_to_dataframe(weather_data)
+
+    csv_file = tmp_path / "weather_forecast.csv"
+    api.save_to_csv(weather_df, str(csv_file))
+
+    assert csv_file.exists()
+
+
+@pytest.mark.parametrize(
+    "api_key,location",
+    [(VALID_API_KEY, VALID_LOCATION)],
+)
+@patch("wwoski.SkiWeatherAPI.get_weather_data")
+def test_plot_weather_data(mock_get_weather_data, api_key, location):
     """
     Test the `plot_weather_data` method by plotting the weather data.
     """
-    api = SkiWeatherAPI(api_key)
-    
-    print(f"Testing plot_weather_data for location: {location}...")
-    
-    try:
-        weather_data = api.get_weather_data(location, num_of_days)
-        weather_df = api.transform_to_dataframe(weather_data)
-        api.plot_weather_data(weather_df)
-        print("Weather data plotted successfully!")
-    except Exception as e:
-        print(f"Error occurred (Invalid location): {e}")
+    mock_get_weather_data.return_value = MOCK_WEATHER_DATA
 
-def run_tests():
-    """
-    Run the tests with valid API key and location, invalid API key, and invalid location.
-    """
-    num_of_days = 7 
-    
-    # Test valid API key and location
-    test_get_weather_data(valid_api_key, valid_location, num_of_days)
-    test_transform_to_dataframe(valid_api_key, valid_location, num_of_days)
-    test_save_to_csv(valid_api_key, valid_location, num_of_days)
-    test_plot_weather_data(valid_api_key, valid_location, num_of_days)
-    
-    # Test invalid API key
-    test_get_weather_data(invalid_api_key, valid_location, num_of_days)
-    test_transform_to_dataframe(invalid_api_key, valid_location, num_of_days)
-    test_save_to_csv(invalid_api_key, valid_location, num_of_days)
-    test_plot_weather_data(invalid_api_key, valid_location, num_of_days)
-    
-    # Test valid API key and invalid location
-    test_get_weather_data(valid_api_key, invalid_location, num_of_days)
-    test_transform_to_dataframe(valid_api_key, invalid_location, num_of_days)
-    test_save_to_csv(valid_api_key, invalid_location, num_of_days)
-    test_plot_weather_data(valid_api_key, invalid_location, num_of_days)
-    
-    # Test invalid API key and invalid location
-    test_get_weather_data(invalid_api_key, invalid_location, num_of_days)
-    test_transform_to_dataframe(invalid_api_key, invalid_location, num_of_days)
-    test_save_to_csv(invalid_api_key, invalid_location, num_of_days)
-    test_plot_weather_data(invalid_api_key, invalid_location, num_of_days)
+    api = SkiWeatherAPI(api_key)
+    weather_data = api.get_weather_data(location, NUM_OF_DAYS)
+    weather_df = api.transform_to_dataframe(weather_data)
+
+    # Ensure the method runs without error (visual inspection is manual)
+    api.plot_weather_data(weather_df)
+
 
 if __name__ == "__main__":
-    run_tests()
+    pytest.main()
+
